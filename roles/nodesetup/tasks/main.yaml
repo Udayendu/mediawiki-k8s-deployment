@@ -1,0 +1,65 @@
+---
+- name: Load br_netfilter module
+  command: modprobe br_netfilter
+
+- name: Add the br_netfilter module to work across reboot
+  shell: |
+    echo br_netfilter > /etc/modules-load.d/br_netfilter.conf
+
+- name: Enable the bridge-nf-call-iptables and ipv4.ip_forward
+  sysctl:
+    name: "{{ item }}"
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_items:
+    - net.bridge.bridge-nf-call-iptables
+    - net.ipv4.ip_forward
+
+- name: Configure the yum repo for kubernetes
+  copy:
+    src: "{{ role_path }}/files/{{ item }}"
+    dest: /etc/yum.repos.d/{{ item }}
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - kubernetes.repo
+    - crio-stable.repo
+
+- name: Install Kubernetes binaries
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - cri-o-1.24.4
+    - kubelet-1.26.1
+    - kubeadm-1.26.1
+    - kubectl-1.26.1
+
+- name: Enable the crio & kubelet service
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+  with_items:
+    - crio
+    - kubelet
+
+- name: Start the cri-o service
+  systemd:
+    name: "{{ item }}"
+    state: started
+  with_items:
+    - crio
+
+- name: Copy the node join command file to Worker nodes
+  copy:
+    src: /tmp/node_join_command
+    dest: /tmp/node_join_command
+    mode: 0755
+
+- name: Join the Worker nodes to the cluster
+  command: sh /tmp/node_join_command
+  register: result
+

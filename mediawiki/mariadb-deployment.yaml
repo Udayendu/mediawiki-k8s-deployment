@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-deployment
+  namespace: mediawiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        network/mwnetwork: "true"
+        app: mariadb
+    spec:
+      containers:
+      - name: mariadb
+        image: mariadb:latest
+        ports:
+        - containerPort: 3306 
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: secret
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mariadb-name
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name:  mariadb-secret
+              key: mariadb_user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name:  mariadb-secret
+              key: mariadb_password        
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-internal-service
+  namespace: mediawiki
+spec:
+  selector:
+    app: mariadb
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
