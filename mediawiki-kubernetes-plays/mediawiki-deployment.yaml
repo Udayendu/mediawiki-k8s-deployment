@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mediawiki-deployment
+  labels:
+    app: mediawiki
+  namespace: mediawiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mediawiki
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        network/mwnetwork: "true"
+        app: mediawiki
+    spec:
+      containers:
+      - name: mediawiki
+        image: docker.io/uskar/mediawikidemo:v2.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: mediawiki-svc
+        env:
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mariadb-name 
+        - name: DB_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mariadb_server
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mariadb_port
+        - name: DB_INSTALL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mariadb_install_user
+        - name: DB_INSTALL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mariadb_install_password
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mariadb_user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mariadb_password
+        - name: MEDIAWIKI_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mediawiki_server_url
+        - name: NODE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mediawiki_node_port
+        - name: MEDIAWIKI_SCRIPT_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mediawiki_script_path
+        - name: MEDIAWIKI_SITE_LANG
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mediawiki_script_language
+        - name: MEDIAWIKI_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mediawiki_admin_password  
+        - name: MEDIAWIKI_SITE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mw-configmap
+              key: mediawiki_site_name
+        - name: MEDIAWIKI_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mediawiki_admin_user
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: mediawiki
+  name: mediawiki-service
+  namespace: mediawiki
+spec:
+  type: NodePort
+  selector:
+    app: mediawiki
+  ports:
+  - name: mediawiki-service-port
+    protocol: TCP
+    port: 80
+    targetPort: mediawiki-svc
+    nodePort: 30100

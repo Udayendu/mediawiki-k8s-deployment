@@ -21,21 +21,24 @@ spec:
         - containerPort: 3306 
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: secret
+          valueFrom:
+            secretKeyRef:
+              name: mediawiki-secret
+              key: mariadb_install_password  
         - name: MYSQL_DATABASE
           valueFrom:
             configMapKeyRef:
               name: mw-configmap
-              key: mariadb-name
+              key: mariadb_name
         - name: MYSQL_USER
           valueFrom:
             secretKeyRef:
-              name:  mariadb-secret
+              name: mediawiki-secret
               key: mariadb_user
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name:  mariadb-secret
+              name: mediawiki-secret
               key: mariadb_password        
 
 ---

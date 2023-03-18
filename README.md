@@ -8,7 +8,7 @@
 ![k8d-deployment-diagram](https://user-images.githubusercontent.com/1809177/221905263-ed62dbde-7983-46f8-ad0d-fb490dc168eb.png)
 
 
-## [v1.0] - 13-03-2022 (dd-mm-yyyy)
+## [v1.1] - 18-03-2022 (dd-mm-yyyy)
 
 ### Ansible Roles for:
   - VM Management:
@@ -49,6 +49,9 @@
   - kubeadm: 1.26.1
   - kubectl: 1.26.1
 
+### Container OS
+  - rockylinux: 8
+
 ### Mediawiki & MariaDB docker images
   - Mediawiki: 1.39.2
   - MariaDB: 10.11.2
@@ -56,13 +59,16 @@
 ### Jenkins file name
   - Jenkinsfile
 
-### Dockerfile for Infra deployment
-  - alpinedevops.dockerfile
+### Docker files
+  - Infra deployment:
+    - alpinedevops.dockerfile
+  - Mediawiki:
+    - mediawiki.dockerfile
 
 ## Docker image build process
 - To build the docker image, use the below command:
 
-  > $ docker build --no-cache=true -f <file_name>.dockerfile -t <docker_registry>/alpinedevops:latest
+  > $ docker build --no-cache=true -f <file_name>.dockerfile -t docker_registry/reponame:tag
 
 - To login to the hub.docker.com, use the below command:
 
@@ -70,7 +76,8 @@
 
 - To push the docker image, use the below command:
 
-  > $ docker push <docker_registry>/alpinedevops:latest
+  > $ docker push docker_registry/reponame:tag
+
 
 ## Deployment Guide:
 
@@ -122,37 +129,44 @@
   - Step5: mariadb & meriadb-service(mariadb-deployment.yaml)
   - Step6: mediawiki & mediawiki-service(mediawiki-deployment.yaml)
 
+- To deploy the above kubernets sequentially by following below command:
+  > kubectl create -f <file_name>.yaml
+
+- Mediawiki container's environmental variables:
+  - Environmental variables with default values (Change them as required)
+    - DB_NAME: wikimediadb
+    - DB_SERVER: mariadb-internal-svc
+    - DB_PORT: 3306
+    - DB_INSTALL_USER: root
+    - DB_INSTALL_PASSWORD: root_secret
+    - DB_USER: wikiuser
+    - DB_PASSWORD: wikipassword
+    - MEDIAWIKI_SERVER_URL: wiki.example.com
+    - NODE_PORT: 31000
+    - MEDIAWIKI_SCRIPT_PATH: /wiki
+    - MEDIAWIKI_SITE_LANG: en
+    - MEDIAWIKI_ADMIN_PASSWORD: Hell0Wiki123
+    - MEDIAWIKI_SITE_NAME: First_Site
+    - MEDIAWIKI_ADMIN_USER: admin
+
+- Mediawiki container entrypoint:
+  - Once the mediawiki installation is done, its having a container entrypoint to configure.
+  - The configuration has to be done from CLI under `/var/www/html` directory.
+  - It will generate `LocalSettings.php` file which is required to access the Mediawiki UI. 
+  - The CLI command should be something like the below one:
+    > php maintenance/install.php --dbname=xxxxxxxx --dbserver=mariadb-internal-service:3306 --installdbuser=xxxxxx --installdbpass=xxxxxxxx --dbuser=xxxxxxxx --dbpass=xxxxxxxxxx --server="http://<kubernetes_master_ip>:<Node_Port>" --scriptpath=/wiki --lang=en --pass=xxxxxxxxxxx "First_Site" "admin"
+
 - Applictaion Access:
-  - Once the deployment is done, mediawiki service can be accessed on [http://<kubernetes_master_ip>:30100](http://<kubernetes_master_ip>:30100) with in the same network.
+  - Once the deployment is done, mediawiki service can be accessed on [http://<kubernetes_master_ip>:<Node_Port>](http://<kubernetes_master_ip>:<Node_Port>) with in the same network.
   - If not interested to use the kubernetes master IP, a proxy can be configured to point to a proper DNS name and port to mask the above link with in the corporate network.
   - In public cloud , it can be done via a LoadBalancer. Just need to change the Service type to LoadBalancer and have the correct DNS mapping of the public IP in the DNS domain.
 
 - Credentials for the deployment:
-  - Credentials are managed in the secrets.yaml file but encoded with base64. Following syntax can be used to encode and decode:
+  - Credentials should be managed in the `secrets.yaml` file & encoded with base64.
   - To encode the credentials:
     > echo -n '<plain_text_content>' | base64
   - To decode the credentials:
     > echo -n '<encoded_content>' | base64 --decode
 
-- Application need some additional configurtaion post deployment to make the application usable. Hence following information will be required for the configuration:
-  - dbserver: mariadb-internal-service:3306
-  - dbuser: root
-  - dbpassword: secret
-  - dbname: wikimediadb
-
-- This deployment will create a hostPath mapping from the kubernetes worker node to the container via '/opt/mediawiki-data'. Once the post deployment setup is done, it will generate a 'LocalSettings.php' file which is required to access the applictaion. Copy it to '/opt/mediawiki-data' location on the node where the container is running and make a softlink to the deployment location by getting into the container. Following steps will help to achieve it:
-
-  - Run the below command to get the node where the mediawiki container is running:
-    > kubectl get pods -o wide -n mediawiki
-
-  - SSH to the node and get the mediawiki container ID by using the below command:
-    - > crictl ps -a
-    - > crictl exec -it <container_id> /bin/bash
-    - > cd /var/www/html
-    - > ln -s /opt/mediawiki-data/LocalSettings.php LocalSettings.php
-    - > exit
-
-### TODO
-  - A persistent volume to maintain the LocalSettings.php file for containers
-  - Linking of 'LocalSettings.php' file in the running container
-  - REST API based post deployment configuration for Mediawiki. Its supported but need some additional configuration to handle the deployment via kubernetes.
+- Configuration variables for kubernetes
+  - All the configuration related variables should be managed in `configmap.yaml` file
