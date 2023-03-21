@@ -45,9 +45,9 @@
 
 ### Kubernetes Packages:
   - cri-o:   1.24.4
-  - kubelet: 1.26.1
-  - kubeadm: 1.26.1
-  - kubectl: 1.26.1
+  - kubelet: 1.26.3
+  - kubeadm: 1.26.3
+  - kubectl: 1.26.3
 
 ### Container OS
   - rockylinux: 8
