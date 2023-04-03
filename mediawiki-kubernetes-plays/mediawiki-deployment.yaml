@@ -30,7 +30,7 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: mw-configmap
-              key: mariadb-name 
+              key: mariadb_name 
         - name: DB_SERVER
           valueFrom:
             configMapKeyRef:
