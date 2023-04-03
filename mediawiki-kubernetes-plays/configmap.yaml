@@ -10,6 +10,6 @@ data:
   mediawiki_server_url: "wiki.example.com"    # Access URL of Mediawiki Server
   mediawiki_node_port: "30100"                # NodePort using which the Mediawiki Server is accessible
   mediawiki_script_path: "/wiki"              # Complete URL: http://$mediawiki_server_url:$mediawiki_node_port/$mediawiki_script_path
-  mediawiki_site_language: "en"               # English is the default language for the site
+  mediawiki_script_language: "en"             # English is the default language for the site
   mediawiki_site_name: "First_Wiki"           # Default Wiki site name that will be created at the time of deployment
 
